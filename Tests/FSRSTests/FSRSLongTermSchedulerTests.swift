@@ -30,6 +30,19 @@ class LongTermSchedulerTests: XCTestCase {
         algorithm = FSRS(parameters: params)
     }
 
+    private func assertDoublesEqual(
+        _ actual: [Double],
+        _ expected: [Double],
+        accuracy: Double = 0.0001,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertEqual(actual.count, expected.count, file: file, line: line)
+        for (actual, expected) in zip(actual, expected) {
+            XCTAssertEqual(actual, expected, accuracy: accuracy, file: file, line: line)
+        }
+    }
+
 
     func test1() {
         let testAdditionalCases: (
@@ -59,8 +72,8 @@ class LongTermSchedulerTests: XCTestCase {
             }
 
             XCTAssertEqual(ivlHistory, exivlHistory)
-            XCTAssertEqual(sHistory, exsHistory)
-            XCTAssertEqual(dHistory, exdHistory)
+            assertDoublesEqual(sHistory, exsHistory)
+            assertDoublesEqual(dHistory, exdHistory)
         }
         testAdditionalCases(
             calendar.date(from: DateComponents(calendar: Calendar.current, year: 2022, month: 12, day: 29, hour: 12, minute: 30))!,
@@ -111,8 +124,8 @@ class LongTermSchedulerTests: XCTestCase {
             }
 
             XCTAssertEqual(ivlHistory, exivlHistory)
-            XCTAssertEqual(sHistory, exsHistory)
-            XCTAssertEqual(dHistory, exdHistory)
+            assertDoublesEqual(sHistory, exsHistory)
+            assertDoublesEqual(dHistory, exdHistory)
         }
         testAdditionalCases(
             calendar.date(from: DateComponents(calendar: Calendar.current, year: 2022, month: 12, day: 29, hour: 12, minute: 30))!,
@@ -167,8 +180,8 @@ class LongTermSchedulerTests: XCTestCase {
             }
 
             XCTAssertEqual(ivlHistory, exivlHistory)
-            XCTAssertEqual(sHistory, exsHistory)
-            XCTAssertEqual(dHistory, exdHistory)
+            assertDoublesEqual(sHistory, exsHistory)
+            assertDoublesEqual(dHistory, exdHistory)
         }
         testAdditionalCases(
             calendar.date(from: DateComponents(calendar: Calendar.current, year: 2022, month: 12, day: 29, hour: 12, minute: 30))!,
@@ -223,8 +236,8 @@ class LongTermSchedulerTests: XCTestCase {
             }
 
             XCTAssertEqual(ivlHistory, exivlHistory)
-            XCTAssertEqual(sHistory, exsHistory)
-            XCTAssertEqual(dHistory, exdHistory)
+            assertDoublesEqual(sHistory, exsHistory)
+            assertDoublesEqual(dHistory, exdHistory)
         }
         testAdditionalCases(
             calendar.date(from: DateComponents(calendar: Calendar.current, year: 2022, month: 12, day: 29, hour: 12, minute: 30))!,
@@ -279,8 +292,8 @@ class LongTermSchedulerTests: XCTestCase {
             }
 
             XCTAssertEqual(ivlHistory, exivlHistory)
-            XCTAssertEqual(sHistory, exsHistory)
-            XCTAssertEqual(dHistory, exdHistory)
+            assertDoublesEqual(sHistory, exsHistory)
+            assertDoublesEqual(dHistory, exdHistory)
         }
         testAdditionalCases(
             calendar.date(from: DateComponents(calendar: Calendar.current, year: 2022, month: 12, day: 29, hour: 12, minute: 30))!,
@@ -342,10 +355,10 @@ class LongTermSchedulerTests: XCTestCase {
         XCTAssertEqual(ivlHistory, [
             0, 4, 1, 5, 19, 0
         ])
-        XCTAssertEqual(sHistory, [
+        assertDoublesEqual(sHistory, [
             3.0412, 3.0412, 1.21778427, 4.73753014, 19.02294877, 3.20676576,
         ])
-        XCTAssertEqual(dHistory, [
+        assertDoublesEqual(dHistory, [
             4.49094334, 4.26664289, 5.24649844, 4.97127357, 4.71459886, 5.57136081,
         ])
         XCTAssertEqual(stateHistory, [

@@ -10,15 +10,13 @@ public class FSRS: FSRSAlgorithm {
     
     override func processparameters(_ parameters: FSRSParameters) {
         let parameters = defaults.generatorParameters(props: parameters)
+        self.parameters = parameters
         if parameters.requestRetention.isFinite {
             do {
                 intervalModifier = try calculateIntervalModifier(requestRetention: parameters.requestRetention)
             } catch {
                 print(error.localizedDescription)
             }
-        }
-        if parameters != self.parameters {
-            self.parameters = parameters
         }
     }
     

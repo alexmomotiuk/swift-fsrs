@@ -38,7 +38,7 @@ class FSRSCalcElapsedDaysTests: XCTestCase {
                 let now = Date(timeIntervalSince1970: rid)
                 let log = try f.next(card: card, now: now, grade: grade[index])
                 card = log.card
-                XCTAssertEqual(card.stability, expected[index])
+                XCTAssertEqual(card.stability, expected[index], accuracy: 0.0001)
             } catch {
                 print(error.localizedDescription)
             }

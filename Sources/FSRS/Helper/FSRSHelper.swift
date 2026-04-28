@@ -29,8 +29,8 @@ class FSRSHelper {
             delta += range.factor * max(min(interval, range.end) - range.start, 0.0)
         }
         let newInterval = min(interval, maximumInterval)
-        var minIvl = max(2, round(newInterval - delta))
-        let maxIvl = min(round(newInterval + delta), maximumInterval)
+        var minIvl = max(2, (newInterval - delta).rounded(.toNearestOrEven))
+        let maxIvl = min((newInterval + delta).rounded(.toNearestOrEven), maximumInterval)
         if newInterval > elapsedDays {
             minIvl = max(minIvl, elapsedDays + 1)
         }

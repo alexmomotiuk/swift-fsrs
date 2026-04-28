@@ -141,9 +141,11 @@ class BasicScheduler: AbstractScheduler {
         retrievability: Double
     ) {
         nextAgain.difficulty = algorithm.nextDifficulty(d: difficulty, g: .again)
-        let nextSMin = stability / exp(algorithm.parameters.w[17] * algorithm.parameters.w[18])
-        let sAfterAll = algorithm.nextForgetStability(d: difficulty, s: stability, r: retrievability)
-        nextAgain.stability = FSRSHelper.clamp(nextSMin.toFixedNumber(8), FSRSDefaults.S_MIN, sAfterAll)
+        nextAgain.stability = algorithm.nextForgetStability(
+            d: difficulty,
+            s: stability,
+            r: retrievability
+        )
         
         nextHard.difficulty = algorithm.nextDifficulty(d: difficulty, g: .hard)
         nextHard.stability = algorithm.nextRecallStability(

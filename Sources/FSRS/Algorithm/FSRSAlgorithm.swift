@@ -9,21 +9,17 @@ import Foundation
  * @see https://github.com/open-spaced-repetition/fsrs4anki/wiki/The-Algorithm#fsrs-45
  */
 public class FSRSAlgorithm {
-    /**
-     * @default DECAY = -0.5
-     */
-    let decay = -0.5
-    /**
-     * FACTOR = Math.pow(0.9, 1 / DECAY) - 1= 19 / 81
-     *
-     * $$\text{FACTOR} = \frac{19}{81}$$
-     * @default FACTOR = 19 / 81
-     */
-    let factor: Double = 19 / 81
-    
     let defaults = FSRSDefaults()
     
     internal var parameters: FSRSParameters
+
+    var decay: Double {
+        -(parameters.w[20])
+    }
+
+    var factor: Double {
+        pow(0.9, 1 / decay) - 1
+    }
 
     var params: FSRSParameters {
         get {
@@ -36,6 +32,7 @@ public class FSRSAlgorithm {
 
     func processparameters(_ parameters: FSRSParameters) {
         let parameters = defaults.generatorParameters(props: parameters)
+        self.parameters = parameters
         if parameters.requestRetention.isFinite {
             do {
                 intervalModifier = try calculateIntervalModifier(
@@ -44,10 +41,6 @@ public class FSRSAlgorithm {
             } catch {
                 print(error.localizedDescription)
             }
-
-        }
-        if parameters != self.parameters {
-            self.parameters = parameters
         }
     }
 
@@ -71,7 +64,7 @@ public class FSRSAlgorithm {
             throw FSRSError(.invalidRetention, "Requested retention rate should be in the range (0,1]")
         }
         let result = (pow(requestRetention, 1 / decay) - 1.0) / factor
-        return result.toFixedNumber(8)
+        return result
     }
 
     /**
@@ -83,7 +76,7 @@ public class FSRSAlgorithm {
      * @return Stability (interval when R=90%)
      */
     func initStability(g: Rating) -> Double {
-        max(parameters.w[g.rawValue - 1], 0.1)
+        max(parameters.w[g.rawValue - 1], FSRSDefaults.S_MIN)
     }
 
     /**
@@ -96,13 +89,16 @@ public class FSRSAlgorithm {
      * @return {number} Difficulty $$D \in [1,10]$$
      */
     func initDifficulty(_ grade: Rating) -> Double {
-        constrainDifficulty(
-            r: parameters.w[4] - exp((Double(grade.rawValue) - 1) * parameters.w[5]) + 1
-        )
+        initDifficulty(grade, shouldClamp: true)
+    }
+
+    func initDifficulty(_ grade: Rating, shouldClamp: Bool) -> Double {
+        let difficulty = parameters.w[4] - exp((Double(grade.rawValue) - 1) * parameters.w[5]) + 1
+        return shouldClamp ? constrainDifficulty(r: difficulty) : difficulty
     }
 
     func constrainDifficulty(r: Double) -> Double {
-        min(max(r.toFixedNumber(8), 1.0), 10.0)
+        min(max(r, 1.0), 10.0)
     }
 
     /**
@@ -112,7 +108,7 @@ public class FSRSAlgorithm {
      * @return {number} - The fuzzed interval.
      **/
     func applyFuzz(ivl: Double, elapsedDays: Double) -> Int {
-        guard parameters.enableFuzz && ivl >= 2.5 else { return Int(round(ivl)) }
+        guard parameters.enableFuzz && ivl >= 2.5 else { return Int(ivl.rounded(.toNearestOrEven)) }
         let genetaor = alea(seed: seed)
         let fuzzFactor = genetaor.next()
         let ivls = FSRSHelper.getFuzzRange(
@@ -129,7 +125,7 @@ public class FSRSAlgorithm {
      *   @param {number} elapsed_days t days since the last review
      */
     func nextInterval(s: Double, elapsedDays: Double) -> Int {
-        let newInterval = min(max(1, round(s * intervalModifier)), parameters.maximumInterval)
+        let newInterval = min(max(1, (s * intervalModifier).rounded(.toNearestOrEven)), parameters.maximumInterval)
         return applyFuzz(ivl: newInterval, elapsedDays: elapsedDays)
     }
 
@@ -137,7 +133,7 @@ public class FSRSAlgorithm {
      * @see https://github.com/open-spaced-repetition/fsrs4anki/issues/697
      */
     func linearDamping(deltaD: Double, oldD: Double) -> Double {
-        (deltaD * (10 - oldD) / 9).toFixedNumber(8)
+        deltaD * (10 - oldD) / 9
     }
     
     /**
@@ -152,7 +148,7 @@ public class FSRSAlgorithm {
     func nextDifficulty(d: Double, g: Rating) -> Double {
         let deltaD = -(parameters.w[6] * Double(g.rawValue - 3))
         let nextD = d + linearDamping(deltaD: deltaD, oldD: d)
-        return constrainDifficulty(r: meanReversion(initValue: initDifficulty(.easy), current: nextD))
+        return constrainDifficulty(r: meanReversion(initValue: initDifficulty(.easy, shouldClamp: false), current: nextD))
     }
     
     /**
@@ -163,7 +159,7 @@ public class FSRSAlgorithm {
      * @return {number} difficulty
      */
     func meanReversion(initValue: Double, current: Double) -> Double {
-        (parameters.w[7] * initValue + (1 - parameters.w[7]) * current).toFixedNumber(8)
+        parameters.w[7] * initValue + (1 - parameters.w[7]) * current
     }
 
     func nextRecallStability(d: Double, s: Double, r: Double, g: Rating) -> Double {
@@ -174,10 +170,9 @@ public class FSRSAlgorithm {
                 1 + exp(parameters.w[8]) * (11 - d) * pow(s, -(parameters.w[9])) *
                 (exp((1 - r) * parameters.w[10]) - 1) * hardPenalty * easyBound
             ),
-            0.01,
+            FSRSDefaults.S_MIN,
             36500
         )
-        .toFixedNumber(8)
     }
 
     /**
@@ -194,11 +189,13 @@ public class FSRSAlgorithm {
         let p1 = pow(d, -(parameters.w[12]))
         let p2 = pow(s + 1, parameters.w[13]) - 1
         let p3 = exp((1 - r) * parameters.w[14])
+        let longTerm = parameters.w[11] * p1 * p2 * p3
+        let shortTerm = s / exp(parameters.w[17] * parameters.w[18])
         return FSRSHelper.clamp(
-            parameters.w[11] * p1 * p2 * p3,
+            min(longTerm, shortTerm),
             FSRSDefaults.S_MIN,
             36500
-        ).toFixedNumber(8)
+        )
     }
 
     /**
@@ -208,12 +205,16 @@ public class FSRSAlgorithm {
      * @param {Grade} g Grade (Rating[0.again,1.hard,2.good,3.easy])
      */
     func nextShortTermStability(s: Double, g: Rating) -> Double {
-        let part = Double(g.rawValue) - 3 + parameters.w[18]
+        var increase = exp(parameters.w[17] * (Double(g.rawValue) - 3 + parameters.w[18]))
+            * pow(s, -(parameters.w[19]))
+        if g == .good || g == .easy {
+            increase = max(increase, 1.0)
+        }
         return FSRSHelper.clamp(
-            s * exp(parameters.w[17] * part),
+            s * increase,
             FSRSDefaults.S_MIN,
             36500
-        ).toFixedNumber(8)
+        )
     }
 
     /**
@@ -224,7 +225,7 @@ public class FSRSAlgorithm {
      * @return {number} r Retrievability (probability of recall)
      */
     func forgettingCurve(elapsedDays: Double, stability: Double) -> Double {
-        pow(1 + ((factor * elapsedDays) / stability), decay).toFixedNumber(8)
+        pow(1 + ((factor * elapsedDays) / stability), decay)
     }
     
     /**
@@ -236,8 +237,8 @@ public class FSRSAlgorithm {
       * @returns The next state of memory with updated difficulty and stability.
       */
     func nextState(memoryState: FSRSState?, t: Double, g: Rating) throws -> FSRSState {
-        var difficulty = memoryState?.difficulty ?? 0.0
-        var stability = memoryState?.stability ?? 0.0
+        let difficulty = memoryState?.difficulty ?? 0.0
+        let stability = memoryState?.stability ?? 0.0
         if t < 0 {
             throw FSRSError.init(.invalidDeltaT)
         }
@@ -257,21 +258,14 @@ public class FSRSAlgorithm {
         var newS = sAfterSuccess
         
         if g == .again {
-            var w17 = 0.0
-            var w18 = 0.0
-            if params.enableShortTerm {
-                w17 = params.w[17]
-                w18 = params.w[18]
-            }
-            let nextSMin = stability / exp(w17 * w18)
-            newS = FSRSHelper.clamp(nextSMin, FSRSDefaults.S_MIN, sAfterFail)
+            newS = sAfterFail
         }
         
         if t == 0 && params.enableShortTerm {
             newS = sAfterShortTerm
         }
         
-        var newD = nextDifficulty(d: difficulty, g: g)
+        let newD = nextDifficulty(d: difficulty, g: g)
         return FSRSState(stability: newS, difficulty: newD)
     }
 }

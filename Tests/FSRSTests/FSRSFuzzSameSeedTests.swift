@@ -17,6 +17,7 @@ class FuzzSameSeedTests: XCTestCase {
         return res
     }()
 
+    @available(iOS 17.0, macOS 14.0, *)
     func testFuzzSameShortTerm() {
         do {
             let initialCard = FSRSDefaults().createEmptyCard()
@@ -27,23 +28,19 @@ class FuzzSameSeedTests: XCTestCase {
             var timestamps: [TimeInterval] = []
 
             for _ in 0..<100 {
-                if #available(macOS 14.0, *) {
-                    DispatchQueue.main.asyncAfterUnsafe(deadline: .now() + 0.05) {
-                        do {
-                            let scheduler = FSRS(parameters: .init(enableFuzz: true))
-                            let nextCard = try scheduler.next(card: card, now: mockTomorrow, grade: .good).card
-                            timestamps.append(nextCard.due.timeIntervalSince1970)
-                            
-                            if timestamps.count == 100 {
-                                let firstValue = timestamps[0]
-                                XCTAssertTrue(timestamps.allSatisfy { $0 == firstValue })
-                            }
-                        } catch {
-                            
+                DispatchQueue.main.asyncAfterUnsafe(deadline: .now() + 0.05) {
+                    do {
+                        let scheduler = FSRS(parameters: .init(enableFuzz: true))
+                        let nextCard = try scheduler.next(card: card, now: mockTomorrow, grade: .good).card
+                        timestamps.append(nextCard.due.timeIntervalSince1970)
+                        
+                        if timestamps.count == 100 {
+                            let firstValue = timestamps[0]
+                            XCTAssertTrue(timestamps.allSatisfy { $0 == firstValue })
                         }
+                    } catch {
+                        
                     }
-                } else {
-                    // Fallback on earlier versions
                 }
             }
         } catch {
@@ -51,36 +48,28 @@ class FuzzSameSeedTests: XCTestCase {
         }
     }
 
-    func testFuzzSameLongTerm() {
-        do {
-            let initialCard = FSRSDefaults().createEmptyCard()
-            let fsrsInstance = FSRS(parameters: .init(enableShortTerm: false))
-            let card = try fsrsInstance.next(card: initialCard, now: mockNow, grade: .good).card
-            let mockTomorrow = calendar.date(from: DateComponents(year: 2024, month: 8, day: 18))!
-
-            var timestamps: [TimeInterval] = []
-
-            for _ in 0..<100 {
-                if #available(macOS 14.0, *) {
-                    DispatchQueue.main.asyncAfterUnsafe(deadline: .now() + 0.05) {
-                        do {
-                            let scheduler = FSRS(parameters: .init(enableFuzz: true, enableShortTerm: false))
-                            let nextCard = try scheduler.next(card: card, now: mockTomorrow, grade: .good).card
-                            timestamps.append(nextCard.due.timeIntervalSince1970)
-                            
-                            if timestamps.count == 100 {
-                                let firstValue = timestamps[0]
-                                XCTAssertTrue(timestamps.allSatisfy { $0 == firstValue })
-                            }
-                        } catch {}
+    @available(iOS 17.0, macOS 14.0, *)
+    func testFuzzSameLongTerm() throws {
+        let initialCard = FSRSDefaults().createEmptyCard()
+        let fsrsInstance = FSRS(parameters: .init(enableShortTerm: false))
+        let card = try fsrsInstance.next(card: initialCard, now: mockNow, grade: .good).card
+        let mockTomorrow = calendar.date(from: DateComponents(year: 2024, month: 8, day: 18))!
+        
+        var timestamps: [TimeInterval] = []
+        
+        for _ in 0..<100 {
+            DispatchQueue.main.asyncAfterUnsafe(deadline: .now() + 0.05) {
+                do {
+                    let scheduler = FSRS(parameters: .init(enableFuzz: true, enableShortTerm: false))
+                    let nextCard = try scheduler.next(card: card, now: mockTomorrow, grade: .good).card
+                    timestamps.append(nextCard.due.timeIntervalSince1970)
+                    
+                    if timestamps.count == 100 {
+                        let firstValue = timestamps[0]
+                        XCTAssertTrue(timestamps.allSatisfy { $0 == firstValue })
                     }
-                } else {
-                    // Fallback on earlier versions
-                }
+                } catch {}
             }
-
-        } catch {
-            
         }
     }
 }

@@ -278,18 +278,18 @@ class FSRSReschduleTests: XCTestCase {
                 rating: .manual,
                 state: .review,
                 due: calendar.date(from: DateComponents(year: 2024, month: 8, day: 13, hour: 1, minute: 0))!,
-                stability: 18.80877052,
-                difficulty: 3.22450159,
+                stability: 13.485062611471017,
+                difficulty: 1.0,
                 elapsedDays: 1,
                 lastElapsedDays: 1,
-                scheduledDays: 19,
+                scheduledDays: 13,
                 review: calendar.date(from: DateComponents(year: 2024, month: 8, day: 14, hour: 1, minute: 0))!
            ))
         let nextItemExpected = RecordLogItem(
             card: Card(
                 due: calendar.date(from: DateComponents(year: 2024, month: 9, day: 9, hour: 1, minute: 0))!,
-                stability: 24.7796143,
-                difficulty: 3.28258807,
+                stability: 25.330294348464538,
+                difficulty: 3.2748020127968385,
                 elapsedDays: 1,
                 scheduledDays: 25,
                 reps: 4,
@@ -341,8 +341,8 @@ class FSRSReschduleTests: XCTestCase {
         let expected = RecordLogItem(
             card: Card(
                 due: calendar.date(from: DateComponents(year: 2024, month: 9, day: 04, hour: 17, minute: 0))!, // '2024-09-04T17:00:00.000Z'
-                stability: 18.80877052,
-                difficulty: 3.22450159,
+                stability: 13.485062611471017,
+                difficulty: 1.0,
                 elapsedDays: 1,
                 scheduledDays: 21,
                 reps: 3,
@@ -354,17 +354,17 @@ class FSRSReschduleTests: XCTestCase {
                 rating: .manual,
                 state: .review,
                 due: calendar.date(from: DateComponents(year: 2024, month: 8, day: 13, hour: 1, minute: 0))!, // '2024-08-13T01:00:00.000Z'
-                stability: 18.80877052,
-                difficulty: 3.22450159,
+                stability: 13.485062611471017,
+                difficulty: 1.0,
                 elapsedDays: 1,
                 lastElapsedDays: 1,
-                scheduledDays: 19,
+                scheduledDays: 13,
                 review: calendar.date(from: DateComponents(year: 2024, month: 8, day: 14, hour: 1, minute: 0))! // '2024-08-14T01:00:00.000Z'
             )
         )
         
         let currentCard = Card(
-            due: calendar.date(from: DateComponents(year: 2024, month: 9, day: 06, hour: 1, minute: 0))!, // '2024-09-06T01:00:00.000Z'
+            due: calendar.date(from: DateComponents(year: 2024, month: 9, day: 02, hour: 1, minute: 0))!,
             stability: 21.79806877,
             difficulty: 3.2828565,
             elapsedDays: 1,
@@ -400,11 +400,11 @@ class FSRSReschduleTests: XCTestCase {
         
         let expected = RecordLogItem(
             card: Card(
-                due: calendar.date(from: DateComponents(year: 2024, month: 9, day: 9, hour: 1, minute: 0))!, // '2024-09-09T01:00:00.000Z'
-                stability: 24.86663381,
-                difficulty: 3.22450159,
+                due: calendar.date(from: DateComponents(year: 2024, month: 9, day: 7, hour: 1, minute: 0))!,
+                stability: 23.065957423884665,
+                difficulty: 1.0,
                 elapsedDays: 1,
-                scheduledDays: 25,
+                scheduledDays: 23,
                 reps: 4,
                 lapses: 0,
                 state: .review,
@@ -414,11 +414,11 @@ class FSRSReschduleTests: XCTestCase {
                 rating: .good,
                 state: .review,
                 due: calendar.date(from: DateComponents(year: 2024, month: 8, day: 14, hour: 1, minute: 0))!, // '2024-08-14T01:00:00.000Z'
-                stability: 21.86357285,
-                difficulty: 3.22450159,
+                stability: 18.3762654234516,
+                difficulty: 1.0,
                 elapsedDays: 1,
                 lastElapsedDays: 1,
-                scheduledDays: 22,
+                scheduledDays: 18,
                 review: calendar.date(from: DateComponents(year: 2024, month: 8, day: 15, hour: 1, minute: 0))! // '2024-08-15T01:00:00.000Z'
             )
         )
@@ -495,12 +495,12 @@ class FSRSReschduleTests: XCTestCase {
 
         XCTAssertNotNil(resultsShort.rescheduleItem)
         XCTAssertEqual(resultsShort.collections.count, 4)
-        XCTAssertEqual(ivlHistoryShort, [0, 4, 14, 38])
+        XCTAssertEqual(ivlHistoryShort, [0, 2, 16, 53])
         XCTAssertEqual(sHistoryShort, [
-            3.173, 4.46685806, 14.21728391, 37.90805078,
+            2.3065, 2.3065, 16.188022828512615, 52.76325707135721,
         ])
         XCTAssertEqual(dHistoryShort, [
-            5.28243442, 5.27296793, 5.26354498, 5.25416538,
+            2.118103970459015, 2.1112142357853942, 2.1043313908464474, 2.0974554287524394,
         ])
 
         // Switch to long-term scheduler
@@ -516,9 +516,9 @@ class FSRSReschduleTests: XCTestCase {
 
         XCTAssertNotNil(results.rescheduleItem)
         XCTAssertEqual(results.collections.count, 4)
-        XCTAssertEqual(ivlHistoryLong, [3, 4, 13, 37])
-        XCTAssertEqual(sHistoryLong, [3.173, 3.173, 12.96611898, 36.73449305])
-        XCTAssertEqual(dHistoryLong, [5.28243442, 5.27296793, 5.26354498, 5.25416538])
+        XCTAssertEqual(ivlHistoryLong, [2, 3, 16, 53])
+        XCTAssertEqual(sHistoryLong, [2.3065, 2.3065, 16.188022828512615, 52.76325707135721])
+        XCTAssertEqual(dHistoryLong, [2.118103970459015, 2.1112142357853942, 2.1043313908464474, 2.0974554287524394])
     }
 
     func testCurrentCardEqualRescheduleCard() {
@@ -539,11 +539,11 @@ class FSRSReschduleTests: XCTestCase {
         }
 
         let currentCard = Card(
-            due: calendar.date(from: DateComponents(year: 2024, month: 11, day: 05))!, // 2024-11-07T00:00:00.000Z
+            due: calendar.date(from: DateComponents(year: 2024, month: 11, day: 20))!,
             stability: 37.90805078,
             difficulty: 5.25416538,
             elapsedDays: 11,
-            scheduledDays: 9,
+            scheduledDays: 24,
             reps: 5,
             lapses: 0,
             state: .review,

@@ -142,13 +142,13 @@ class RetrievabilityTests: XCTestCase {
     func testRetrievabilityPercentageForReviewCards() {
         let card = FSRSDefaults().createEmptyCard(now: dateFormatter.date(from: "2023-12-01 04:00:00")!)
         let sc = fsrs.repeat(card: card, now: dateFormatter.date(from: "2023-12-01 04:05:00")!)
-        let expectedResults = ["100.00%", "100.00%", "100.00%", "89.83%"]
-        let expectedNumbers = [1.0, 1.0, 1.0, 0.89832125]
+        let expectedResults = ["100.00%", "100.00%", "100.00%", "90.25%"]
+        let expectedNumbers = [1.0, 1.0, 1.0, 0.9024733]
 
         for grade in Rating.allCases {
             if grade != .manual {
                 XCTAssertEqual(fsrs.getRetrievability(card: sc[grade]!.card, now: sc[grade]!.card.due).string, expectedResults[grade.rawValue - 1])
-                XCTAssertEqual(fsrs.getRetrievability(card: sc[grade]!.card, now: sc[grade]!.card.due).number, expectedNumbers[grade.rawValue - 1])
+                XCTAssertEqual(fsrs.getRetrievability(card: sc[grade]!.card, now: sc[grade]!.card.due).number, expectedNumbers[grade.rawValue - 1], accuracy: 0.00000001)
             }
         }
     }
