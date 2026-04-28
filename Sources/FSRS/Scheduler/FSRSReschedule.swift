@@ -51,6 +51,7 @@ class FSRSReschedule {
     func handleManualRating(
         card: Card,
         state: CardState,
+        step: Int?,
         reviewDate: Date,
         elapsedDays: Double,
         stability: Double?,
@@ -64,6 +65,7 @@ class FSRSReschedule {
             log = .init(
                 rating: .manual,
                 state: state,
+                step: card.step,
                 due: due ?? reviewDate,
                 stability: card.stability,
                 difficulty: card.difficulty,
@@ -75,6 +77,7 @@ class FSRSReschedule {
             nextCard = FSRSDefaults().createEmptyCard(
                 now: reviewDate
             )
+            nextCard.cardID = card.cardID
             nextCard.lastReview = reviewDate
         } else {
             guard let due = due else {
@@ -84,6 +87,7 @@ class FSRSReschedule {
             log = .init(
                 rating: .manual,
                 state: card.state,
+                step: card.step,
                 due: card.lastReview ?? card.due,
                 stability: card.stability,
                 difficulty: card.difficulty,
@@ -93,6 +97,7 @@ class FSRSReschedule {
                 review: reviewDate
             )
             nextCard = .init(
+                cardID: card.cardID,
                 due: due,
                 stability: stability ?? card.stability,
                 difficulty: difficulty ?? card.difficulty,
@@ -101,6 +106,7 @@ class FSRSReschedule {
                 reps: card.reps + 1,
                 lapses: card.lapses,
                 state: state,
+                step: step,
                 lastReview: reviewDate
             )
         }
@@ -121,6 +127,7 @@ class FSRSReschedule {
     ) throws -> [RecordLogItem] {
         var result = [RecordLogItem]()
         var curCard = FSRSDefaults().createEmptyCard(now: currentCard.due)
+        curCard.cardID = currentCard.cardID
         for review in reviews {
             var item: RecordLogItem
             if review.rating == .manual {
@@ -138,6 +145,7 @@ class FSRSReschedule {
                 item = try handleManualRating(
                     card: curCard,
                     state: state,
+                    step: review.step,
                     reviewDate: review.review,
                     elapsedDays: interval,
                     stability: review.stability,
@@ -183,6 +191,7 @@ class FSRSReschedule {
         return try handleManualRating(
             card: curCard,
             state: rescheduleCard.state,
+            step: rescheduleCard.step,
             reviewDate: now,
             elapsedDays: log.elapsedDays,
             stability: updateMemory ? rescheduleCard.stability : nil,

@@ -7,34 +7,21 @@
 import Foundation
 
 class BasicScheduler: AbstractScheduler {
+    private var learningSteps: [Double] { algorithm.params.learningSteps }
+    private var relearningSteps: [Double] { algorithm.params.relearningSteps }
+
     override func newState(grade: Rating) -> RecordLogItem {
         if let item = next[grade] { return item }
         var next = current.newCard
         next.difficulty = algorithm.initDifficulty(grade)
         next.stability = algorithm.initStability(g: grade)
-        switch grade {
-        case .again:
-            next.scheduledDays = 0
-            next.due = Date.dateScheduler(now: reviewTime, t: 1)
-            next.state = .learning
-        case .hard:
-            next.scheduledDays = 0
-            next.due = Date.dateScheduler(now: reviewTime, t: 5)
-            next.state = .learning
-        case .good:
-            next.scheduledDays = 0
-            next.due = Date.dateScheduler(now: reviewTime, t: 10)
-            next.state = .learning
-        case .easy:
-            let easyInterval = algorithm.nextInterval(
-                s: next.stability,
-                elapsedDays: current.elapsedDays
-            )
-            next.scheduledDays = Double(easyInterval)
-            next.due = Date.dateScheduler(now: reviewTime, t: Double(easyInterval), unit: .days)
-            next.state = .review
-        case .manual: break
-        }
+        applyLearningTransition(
+            to: &next,
+            grade: grade,
+            currentStep: 0,
+            steps: learningSteps,
+            learningState: .learning
+        )
         return .init(card: next, log: buildLog(rating: grade))
     }
 
@@ -44,41 +31,14 @@ class BasicScheduler: AbstractScheduler {
         let interval = current.elapsedDays
         next.difficulty = algorithm.nextDifficulty(d: last.difficulty, g: grade)
         next.stability = algorithm.nextShortTermStability(s: last.stability, g: grade)
-        switch grade {
-        case .again:
-            next.scheduledDays = 0
-            next.due = Date.dateScheduler(now: reviewTime, t: 5)
-            next.state = last.state
-        case .hard:
-            next.scheduledDays = 0
-            next.due = Date.dateScheduler(now: reviewTime, t: 10)
-            next.state = last.state
-        case .good:
-            let goodInterval = algorithm.nextInterval(
-                s: next.stability,
-                elapsedDays: interval
-            )
-            next.scheduledDays = Double(goodInterval)
-            next.due = Date.dateScheduler(now: reviewTime, t: Double(goodInterval), unit: .days)
-            next.state = .review
-        case .easy:
-            let goodStability = algorithm.nextShortTermStability(
-                s: last.stability,
-                g: .good
-            )
-            let goodInterval = algorithm.nextInterval(
-                s: goodStability,
-                elapsedDays: interval
-            )
-            let easyInterval = max(algorithm.nextInterval(
-                s: next.stability,
-                elapsedDays: interval
-            ), goodInterval + 1)
-            next.scheduledDays = Double(easyInterval)
-            next.due = Date.dateScheduler(now: reviewTime, t: Double(easyInterval), unit: .days)
-            next.state = .review
-        case .manual: break
-        }
+        applyLearningTransition(
+            to: &next,
+            grade: grade,
+            currentStep: last.step ?? 0,
+            steps: last.state == .relearning ? relearningSteps : learningSteps,
+            learningState: last.state == .relearning ? .relearning : .learning,
+            elapsedDays: interval
+        )
         return .init(card: next, log: buildLog(rating: grade))
     }
 
@@ -182,8 +142,21 @@ class BasicScheduler: AbstractScheduler {
             algorithm.nextInterval(s: nextEasy.stability, elapsedDays: interval),
             goodInterval + 1
         )
-        nextAgain.scheduledDays = 0
-        nextAgain.due = Date.dateScheduler(now: reviewTime, t: 5)
+        if relearningSteps.isEmpty {
+            let relearningInterval = min(
+                algorithm.nextInterval(s: nextAgain.stability, elapsedDays: interval),
+                hardInterval
+            )
+            nextAgain.scheduledDays = Double(relearningInterval)
+            nextAgain.due = Date.dateScheduler(
+                now: reviewTime,
+                t: Double(relearningInterval),
+                unit: .days
+            )
+        } else {
+            nextAgain.scheduledDays = 0
+            nextAgain.due = Date.dateScheduler(now: reviewTime, t: relearningSteps[0])
+        }
         
         nextHard.scheduledDays = Double(hardInterval)
         nextHard.due = Date.dateScheduler(now: reviewTime, t: Double(hardInterval), unit: .days)
@@ -201,9 +174,86 @@ class BasicScheduler: AbstractScheduler {
         _ nextGood: inout Card,
         _ nextEasy: inout Card
     ) {
-        nextAgain.state = .relearning
+        nextAgain.state = relearningSteps.isEmpty ? .review : .relearning
+        nextAgain.step = relearningSteps.isEmpty ? nil : 0
         nextHard.state = .review
+        nextHard.step = nil
         nextGood.state = .review
+        nextGood.step = nil
         nextEasy.state = .review
+        nextEasy.step = nil
+    }
+
+    private func applyLearningTransition(
+        to card: inout Card,
+        grade: Rating,
+        currentStep: Int,
+        steps: [Double],
+        learningState: CardState,
+        elapsedDays: Double = 0
+    ) {
+        if steps.isEmpty || (currentStep >= steps.count && [.hard, .good, .easy].contains(grade)) {
+            graduate(&card, elapsedDays: elapsedDays)
+            return
+        }
+
+        switch grade {
+        case .again:
+            scheduleShortTerm(&card, minutes: steps[0], state: learningState, step: 0)
+        case .hard:
+            let minutes: Double
+            if currentStep == 0 && steps.count == 1 {
+                minutes = steps[0] * 1.5
+            } else if currentStep == 0 && steps.count >= 2 {
+                minutes = (steps[0] + steps[1]) / 2.0
+            } else {
+                minutes = steps[min(currentStep, steps.count - 1)]
+            }
+            scheduleShortTerm(
+                &card,
+                minutes: minutes,
+                state: learningState,
+                step: min(currentStep, max(steps.count - 1, 0))
+            )
+        case .good:
+            if currentStep + 1 == steps.count {
+                graduate(&card, elapsedDays: elapsedDays)
+            } else {
+                let nextStep = min(currentStep + 1, steps.count - 1)
+                scheduleShortTerm(
+                    &card,
+                    minutes: steps[nextStep],
+                    state: learningState,
+                    step: nextStep
+                )
+            }
+        case .easy:
+            graduate(&card, elapsedDays: elapsedDays)
+        case .manual:
+            break
+        }
+    }
+
+    private func scheduleShortTerm(
+        _ card: inout Card,
+        minutes: Double,
+        state: CardState,
+        step: Int
+    ) {
+        card.scheduledDays = 0
+        card.due = Date.dateScheduler(now: reviewTime, t: minutes)
+        card.state = state
+        card.step = step
+    }
+
+    private func graduate(_ card: inout Card, elapsedDays: Double) {
+        let interval = algorithm.nextInterval(
+            s: card.stability,
+            elapsedDays: elapsedDays
+        )
+        card.scheduledDays = Double(interval)
+        card.due = Date.dateScheduler(now: reviewTime, t: Double(interval), unit: .days)
+        card.state = .review
+        card.step = nil
     }
 }

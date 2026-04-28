@@ -153,9 +153,13 @@ class LongTermScheduler: AbstractScheduler {
         _ nextEasy: inout Card
     ) {
         nextAgain.state = .review
+        nextAgain.step = nil
         nextHard.state = .review
+        nextHard.step = nil
         nextGood.state = .review
+        nextGood.step = nil
         nextEasy.state = .review
+        nextEasy.step = nil
     }
 
     private func updateNext(

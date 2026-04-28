@@ -192,6 +192,98 @@ public class FSRS: FSRSAlgorithm {
         : 0
         return ("\((retrievability * 100).toFixed(2))%", retrievability)
     }
+
+    public func memoryState(
+        reviews: [FSRSReview],
+        startingState: FSRSState? = nil
+    ) throws -> FSRSState {
+        try historicalMemoryStates(reviews: reviews, startingState: startingState).last
+        ?? startingState
+        ?? FSRSState(stability: 0, difficulty: 0)
+    }
+
+    public func historicalMemoryStates(
+        reviews: [FSRSReview],
+        startingState: FSRSState? = nil
+    ) throws -> [FSRSState] {
+        var results = [FSRSState]()
+        if let startingState {
+            results.append(startingState)
+        }
+
+        var current = startingState
+        for review in reviews {
+            current = try nextState(memoryState: current, t: review.deltaT, g: review.rating)
+            if let current {
+                results.append(current)
+            }
+        }
+        return results
+    }
+
+    public func nextInterval(
+        stability: Double?,
+        desiredRetention: Double? = nil,
+        rating: Rating
+    ) throws -> Double {
+        guard rating != .manual else {
+            throw FSRSError(.invalidRating, "Cannot calculate interval for a manual rating")
+        }
+
+        let retention = desiredRetention ?? params.requestRetention
+        let intervalModifier = try calculateIntervalModifier(requestRetention: retention)
+        let stability = stability ?? initStability(g: rating)
+        let interval = min(
+            max(1, (stability * intervalModifier).rounded(.toNearestOrEven)),
+            params.maximumInterval
+        )
+        return interval
+    }
+
+    public func nextStates(
+        memoryState: FSRSState?,
+        desiredRetention: Double? = nil,
+        elapsedDays: Double
+    ) throws -> FSRSNextStates {
+        func makeState(_ rating: Rating) throws -> FSRSItemState {
+            let memory = try nextState(memoryState: memoryState, t: elapsedDays, g: rating)
+            let interval = try nextInterval(
+                stability: memory.stability,
+                desiredRetention: desiredRetention,
+                rating: rating
+            )
+            return FSRSItemState(memory: memory, interval: interval)
+        }
+
+        return try .init(
+            again: makeState(.again),
+            hard: makeState(.hard),
+            good: makeState(.good),
+            easy: makeState(.easy)
+        )
+    }
+
+    public func memoryStateFromSM2(
+        easeFactor: Double,
+        interval: Double,
+        sm2Retention: Double
+    ) throws -> FSRSState {
+        let stability = max(interval, FSRSDefaults.S_MIN)
+        * factor
+        / (pow(sm2Retention, 1 / decay) - 1)
+        let difficulty = 11.0
+        - (easeFactor - 1.0)
+        / (exp(parameters.w[8]) * pow(stability, -(parameters.w[9])) * (exp((1.0 - sm2Retention) * parameters.w[10]) - 1.0))
+
+        guard stability.isFinite, difficulty.isFinite else {
+            throw FSRSError(.invalidParam, "Cannot derive memory state from SM-2 inputs")
+        }
+
+        return FSRSState(
+            stability: stability,
+            difficulty: constrainDifficulty(r: difficulty)
+        )
+    }
     
     /**
      *
@@ -257,6 +349,7 @@ public class FSRS: FSRSAlgorithm {
         previousCard.reps = max(0, processdCard.reps - 1)
         previousCard.lapses = max(0, lastLapses)
         previousCard.state = state
+        previousCard.step = processedLog.step
         previousCard.lastReview = lastReview
         
         if let completion = completion {
@@ -330,6 +423,7 @@ public class FSRS: FSRSAlgorithm {
         let forgetLog = ReviewLog(
             rating: .manual,
             state: processedCard.state,
+            step: processedCard.step,
             due: processedCard.due,
             stability: processedCard.stability,
             difficulty: processedCard.difficulty,
@@ -339,6 +433,7 @@ public class FSRS: FSRSAlgorithm {
             review: now
         )
         let forgetCard = Card(
+            cardID: processedCard.cardID,
             due: now,
             reps: resetCount ? 0 : processedCard.reps,
             lapses: resetCount ? 0 : processedCard.lapses,

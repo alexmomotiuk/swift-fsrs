@@ -35,6 +35,8 @@ public class FSRSDefaults {
 
     var defaultRequestRetention = 0.9
     var defaultMaximumInterval = 36500.0
+    let defaultLearningSteps = [1.0, 10.0]
+    let defaultRelearningSteps = [10.0]
     let defaultW = [
         0.212, 1.2931, 2.3065, 8.2956, 6.4133,
         0.8334, 3.0194, 0.001, 1.8722, 0.1666,
@@ -75,7 +77,9 @@ public class FSRSDefaults {
             maximumInterval: props?.maximumInterval ?? defaultMaximumInterval,
             w: w,
             enableFuzz: props?.enableFuzz ?? defaultEnableFuzz,
-            enableShortTerm: props?.enableShortTerm ?? defaultEnableShortTerm
+            enableShortTerm: props?.enableShortTerm ?? defaultEnableShortTerm,
+            learningSteps: props?.learningSteps ?? defaultLearningSteps,
+            relearningSteps: props?.relearningSteps ?? defaultRelearningSteps
         )
     }
 

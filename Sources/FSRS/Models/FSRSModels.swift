@@ -39,6 +39,7 @@ public enum Rating: Int, Codable, Equatable, CaseIterable  {
 public struct ReviewLog: Equatable, Codable, Hashable {
     public var rating: Rating          // Rating of the review (Again, Hard, Good, Easy)
     public var state: CardState?       // State of the review (New, Learning, Review, Relearning)
+    public var step: Int?              // Step for learning/relearning cards before the review
     public var due: Date?              // Date of the last scheduling
     public var stability: Double?      // Memory stability during the review
     public var difficulty: Double?     // Difficulty of the card during the review
@@ -50,6 +51,7 @@ public struct ReviewLog: Equatable, Codable, Hashable {
     public init(
         rating: Rating,
         state: CardState? = nil,
+        step: Int? = nil,
         due: Date? = nil,
         stability: Double? = nil,
         difficulty: Double? = nil,
@@ -60,6 +62,7 @@ public struct ReviewLog: Equatable, Codable, Hashable {
     ) {
         self.rating = rating
         self.state = state
+        self.step = step
         self.due = due
         self.stability = stability
         self.difficulty = difficulty
@@ -73,6 +76,7 @@ public struct ReviewLog: Equatable, Codable, Hashable {
         ReviewLog(
             rating: rating,
             state: state,
+            step: step,
             due: due,
             stability: stability,
             difficulty: difficulty,
@@ -85,6 +89,7 @@ public struct ReviewLog: Equatable, Codable, Hashable {
 }
 
 public struct Card: Equatable, Codable, Hashable {
+    public var cardID: Int?          // Optional application-level identifier
     public var due: Date             // Date when the card is next due for review
     public var stability: Double     // A measure of how well the information is retained
     public var difficulty: Double    // Reflects the inherent difficulty of the card content
@@ -93,9 +98,11 @@ public struct Card: Equatable, Codable, Hashable {
     public var reps: Int             // Total number of times the card has been reviewed
     public var lapses: Int           // Times the card was forgotten or remembered incorrectly
     public var state: CardState      // The current state of the card (New, Learning, Review, Relearning)
+    public var step: Int?            // Step for learning/relearning cards, nil otherwise
     public var lastReview: Date?     // The most recent review date, if applicable
 
     public init(
+        cardID: Int? = nil,
         due: Date = Date(),
         stability: Double = 0,
         difficulty: Double = 0,
@@ -104,8 +111,10 @@ public struct Card: Equatable, Codable, Hashable {
         reps: Int = 0,
         lapses: Int = 0,
         state: CardState = .new,
+        step: Int? = nil,
         lastReview: Date? = nil
     ) {
+        self.cardID = cardID
         self.due = due
         self.stability = stability
         self.difficulty = difficulty
@@ -114,11 +123,13 @@ public struct Card: Equatable, Codable, Hashable {
         self.reps = reps
         self.lapses = lapses
         self.state = state
+        self.step = Card.normalizedStep(step, for: state)
         self.lastReview = lastReview
     }
 
     public var newCard: Card {
         Card(
+            cardID: cardID,
             due: due,
             stability: stability,
             difficulty: difficulty,
@@ -127,8 +138,18 @@ public struct Card: Equatable, Codable, Hashable {
             reps: reps,
             lapses: lapses,
             state: state,
+            step: step,
             lastReview: lastReview
         )
+    }
+
+    private static func normalizedStep(_ step: Int?, for state: CardState) -> Int? {
+        switch state {
+        case .learning, .relearning:
+            return step ?? 0
+        case .new, .review:
+            return nil
+        }
     }
 
     func printLog() {
@@ -161,13 +182,17 @@ public struct FSRSParameters: Codable, Equatable {
     public var w: [Double]
     public var enableFuzz: Bool
     public var enableShortTerm: Bool
+    public var learningSteps: [Double]
+    public var relearningSteps: [Double]
     
     public init(
         requestRetention: Double? = nil,
         maximumInterval: Double? = nil,
         w: [Double]? = nil,
         enableFuzz: Bool? = nil,
-        enableShortTerm: Bool? = nil
+        enableShortTerm: Bool? = nil,
+        learningSteps: [Double]? = nil,
+        relearningSteps: [Double]? = nil
     ) {
         let defaults = FSRSDefaults()
         self.requestRetention = requestRetention ?? defaults.defaultRequestRetention
@@ -175,6 +200,8 @@ public struct FSRSParameters: Codable, Equatable {
         self.w = w ?? defaults.defaultW
         self.enableFuzz = enableFuzz ?? defaults.defaultEnableFuzz
         self.enableShortTerm = enableShortTerm ?? defaults.defaultEnableShortTerm
+        self.learningSteps = learningSteps ?? defaults.defaultLearningSteps
+        self.relearningSteps = relearningSteps ?? defaults.defaultRelearningSteps
     }
 }
 
@@ -190,9 +217,48 @@ public struct FSRSReview: Codable {
      * = round(revlog[-1].review - revlog[-2].review)
      */
     public var deltaT: Double
+
+    public init(rating: Rating, deltaT: Double) {
+        self.rating = rating
+        self.deltaT = deltaT
+    }
 }
 
-public struct FSRSState: Codable {
+public struct FSRSState: Codable, Equatable {
     public var stability: Double
     public var difficulty: Double
+
+    public init(stability: Double, difficulty: Double) {
+        self.stability = stability
+        self.difficulty = difficulty
+    }
+}
+
+public struct FSRSItemState: Codable, Equatable {
+    public var memory: FSRSState
+    public var interval: Double
+
+    public init(memory: FSRSState, interval: Double) {
+        self.memory = memory
+        self.interval = interval
+    }
+}
+
+public struct FSRSNextStates: Codable, Equatable {
+    public var again: FSRSItemState
+    public var hard: FSRSItemState
+    public var good: FSRSItemState
+    public var easy: FSRSItemState
+
+    public init(
+        again: FSRSItemState,
+        hard: FSRSItemState,
+        good: FSRSItemState,
+        easy: FSRSItemState
+    ) {
+        self.again = again
+        self.hard = hard
+        self.good = good
+        self.easy = easy
+    }
 }

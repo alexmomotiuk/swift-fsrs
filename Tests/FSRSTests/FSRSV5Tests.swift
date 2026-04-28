@@ -84,7 +84,7 @@ class FSRSV5Tests: XCTestCase {
 
         let stability = schedulingCards[Rating.good]!.card.stability
         let difficulty = schedulingCards[Rating.good]!.card.difficulty
-        XCTAssertEqual(stability, 48.4848, accuracy: 0.0001)
+        XCTAssertEqual(stability, 48.7170, accuracy: 0.0001)
         XCTAssertEqual(difficulty, 7.0866, accuracy: 0.0001)
     }
 

@@ -73,6 +73,7 @@ class AbstractScheduler: IScheduler {
     func buildLog(rating: Rating) -> ReviewLog {
         .init(rating: rating,
               state: current.state,
+              step: current.step,
               due: last.lastReview == nil ? last.due : last.lastReview ?? Date(),
               stability: current.stability,
               difficulty: current.difficulty,

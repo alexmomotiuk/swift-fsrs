@@ -17,6 +17,7 @@ struct ReviewState {
     var review: Date?
     var stability: Double
     var state: CardState
+    var step: Int?
     var reps: Int
     var lapses: Int
     var elapsedDays: Double
@@ -53,6 +54,7 @@ class FSRSReschduleTests: XCTestCase {
                         reps: previousState.reps,
                         lapses: previousState.lapses,
                         state: previousState.state,
+                        step: previousState.step,
                         lastReview: previousState.review
                     )
                 } else {
@@ -103,6 +105,7 @@ class FSRSReschduleTests: XCTestCase {
                 review: log.review,
                 stability: card.stability,
                 state: card.state,
+                step: card.step,
                 reps: card.reps,
                 lapses: card.lapses,
                 elapsedDays: card.elapsedDays,
