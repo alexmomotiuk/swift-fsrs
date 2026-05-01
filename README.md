@@ -57,7 +57,7 @@ For each flashcard, persist the library `Card` alongside your own content:
 
 ```swift
 struct StoredFlashcard: Codable {
-    var id: Int
+    var id: UUID
     var front: String
     var back: String
     var fsrsCard: Card?
@@ -145,7 +145,7 @@ Good for small personal decks.
 
 Only reasonable for very small datasets.
 
-- Store encoded `Data` for `[StoredFlashcard]` or `[Int: StoredFlashcard]`.
+- Store encoded `Data` for `[StoredFlashcard]` or `[UUID: StoredFlashcard]`.
 - Read all values into memory, decode, filter, sort, and take 10.
 - This does not scale well for larger decks.
 
@@ -161,7 +161,7 @@ Example schema:
 
 ```sql
 CREATE TABLE cards (
-    id INTEGER PRIMARY KEY,
+    id TEXT PRIMARY KEY,
     front TEXT NOT NULL,
     back TEXT NOT NULL,
     due_date REAL NOT NULL,

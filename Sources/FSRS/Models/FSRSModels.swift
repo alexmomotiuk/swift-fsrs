@@ -89,7 +89,7 @@ public struct ReviewLog: Equatable, Codable, Hashable {
 }
 
 public struct Card: Equatable, Codable, Hashable {
-    public var cardID: Int?          // Optional application-level identifier
+    public var cardID: UUID?         // Optional application-level identifier
     public var due: Date             // Date when the card is next due for review
     public var stability: Double     // A measure of how well the information is retained
     public var difficulty: Double    // Reflects the inherent difficulty of the card content
@@ -102,7 +102,7 @@ public struct Card: Equatable, Codable, Hashable {
     public var lastReview: Date?     // The most recent review date, if applicable
 
     public init(
-        cardID: Int? = nil,
+        cardID: UUID? = nil,
         due: Date = Date(),
         stability: Double = 0,
         difficulty: Double = 0,
