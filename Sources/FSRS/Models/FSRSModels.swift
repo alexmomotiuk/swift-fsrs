@@ -6,7 +6,7 @@
 
 import Foundation
 
-public enum CardState: Int, Codable {
+public enum CardState: Int, Codable, Sendable {
       case new = 0
       case learning = 1
       case review = 2
@@ -22,7 +22,7 @@ public enum CardState: Int, Codable {
     }
 }
 
-public enum Rating: Int, Codable, Equatable, CaseIterable  {
+public enum Rating: Int, Codable, Sendable, Equatable, CaseIterable  {
     case manual = 0, again = 1, hard, good, easy
 
     public var stringValue: String {
@@ -36,7 +36,7 @@ public enum Rating: Int, Codable, Equatable, CaseIterable  {
     }
 }
 
-public struct ReviewLog: Equatable, Codable, Hashable {
+public struct ReviewLog: Codable, Sendable, Equatable, Hashable {
     public var rating: Rating          // Rating of the review (Again, Hard, Good, Easy)
     public var state: CardState?       // State of the review (New, Learning, Review, Relearning)
     public var step: Int?              // Step for learning/relearning cards before the review
@@ -88,7 +88,7 @@ public struct ReviewLog: Equatable, Codable, Hashable {
     }
 }
 
-public struct Card: Equatable, Codable, Hashable {
+public struct Card: Codable, Equatable, Hashable, Sendable {
     public var cardID: UUID?         // Optional application-level identifier
     public var due: Date             // Date when the card is next due for review
     public var stability: Double     // A measure of how well the information is retained
@@ -164,7 +164,7 @@ public struct Card: Equatable, Codable, Hashable {
     }
 }
 
-public struct RecordLogItem: Codable, Equatable, Hashable {
+public struct RecordLogItem: Codable, Equatable, Hashable, Sendable {
     public var card: Card
     public var log: ReviewLog
     
@@ -176,7 +176,7 @@ public struct RecordLogItem: Codable, Equatable, Hashable {
 
 public typealias RecordLog = [Rating: RecordLogItem]
 
-public struct FSRSParameters: Codable, Equatable {
+public struct FSRSParameters: Codable, Equatable, Sendable {
     public var requestRetention: Double
     public var maximumInterval: Double
     public var w: [Double]
@@ -205,7 +205,7 @@ public struct FSRSParameters: Codable, Equatable {
     }
 }
 
-public struct FSRSReview: Codable {
+public struct FSRSReview: Codable, Sendable {
     /**
      * 0-4: Manual, Again, Hard, Good, Easy
      * = revlog.rating
@@ -224,7 +224,7 @@ public struct FSRSReview: Codable {
     }
 }
 
-public struct FSRSState: Codable, Equatable {
+public struct FSRSState: Codable, Equatable, Sendable {
     public var stability: Double
     public var difficulty: Double
 
@@ -234,7 +234,7 @@ public struct FSRSState: Codable, Equatable {
     }
 }
 
-public struct FSRSItemState: Codable, Equatable {
+public struct FSRSItemState: Codable, Equatable, Sendable {
     public var memory: FSRSState
     public var interval: Double
 
@@ -244,7 +244,7 @@ public struct FSRSItemState: Codable, Equatable {
     }
 }
 
-public struct FSRSNextStates: Codable, Equatable {
+public struct FSRSNextStates: Codable, Equatable, Sendable {
     public var again: FSRSItemState
     public var hard: FSRSItemState
     public var good: FSRSItemState
